@@ -1,10 +1,14 @@
 # Workforce Headcount & Cost Forecasting
 
-A planning tool that forecasts a company's future **headcount** and **fully loaded cost** by department — and lets a planner adjust the forecast for events they already know are coming, like a hiring wave, a hiring freeze, or a reorganization.
+A planning tool that forecasts a company's future **headcount** and **fully loaded cost** — at both the department and the consolidated company level — and lets a planner adjust the forecast for events they already know are coming, like a hiring wave, a hiring freeze, or a reorganization.
 
 Think of it as a smarter version of the spreadsheet that finance and HR teams use to answer two questions every planning cycle:
 
 > *How many people will we have next year — and what will they actually cost?*
+
+**🔗 Live demo: [your-app-name.streamlit.app](https://your-app-name.streamlit.app)** — try it in your browser, no install needed.
+
+> *Replace the link above with your actual Streamlit URL once the app is deployed. (On the free tier, the app may take ~30 seconds to wake up if it hasn't been used recently.)*
 
 ![Engineering headcount forecast, with and without a planned hiring wave](images/hero_override.png)
 
@@ -25,16 +29,22 @@ Most headcount forecasts have two weaknesses, and this project is built to fix b
 ## What it can do
 
 - **Forecast headcount** for any department, up to two years out.
+- **Roll everything up to the company level** — a consolidated view that combines all departments and reflects every department's adjustments, summed together.
 - **Choose between two forecasting methods** — a simple, easy-to-explain one and a more sophisticated one that captures seasonal hiring patterns.
-- **Layer in known future events** month by month — add hires for a planned onboarding class, or freeze attrition during a restructure.
-- **Translate headcount into a true budget** by including payroll taxes, benefits, and overhead — all adjustable.
+- **Layer in known future events** month by month, in two ways: *add* to the forecast (e.g. a planned onboarding class) or *replace* a specific month's value outright (e.g. force departures to zero during a freeze).
+- **See exactly where the forecast comes from** — a breakdown that separates the statistical forecast from the impact of your known events, so it's clear how much of the plan is the model versus your assumptions.
+- **Translate headcount into a true budget** by including payroll taxes, benefits, and overhead — all adjustable with sliders to test different assumptions.
 - **Compare scenarios** to answer questions like *"What does this hiring decision actually cost us over the year?"*
+- **Download any forecast** (department or company) as a CSV.
 
 ---
 
 ## See it in action
 
-The project includes an interactive app (built with Streamlit) where you can point and click — pick a department, drag sliders, and watch the forecast update. No coding required to use it.
+The project includes an interactive app (built with Streamlit) where you can point and click — no coding required to use it. It has two views you can toggle between:
+
+- **Department** — forecast a single department and set its known-event adjustments. Each department's adjustments are saved as you go, so you can plan one team at a time.
+- **Company (consolidated)** — a company-wide rollup that combines every department, with a forecast and breakdown that reflect all the adjustments you set across departments, added together.
 
 It also includes two analysis notebooks that walk through the thinking step by step, with charts and plain-language explanations.
 
@@ -56,7 +66,7 @@ Rather than guessing future headcount directly, the tool forecasts the two thing
 
 > next month's headcount = this month's headcount + hires − departures
 
-This mirrors how real planning works, and it's what makes the "known events" feature natural: a planner adjusts the hires and departures they control, and the headcount (and cost) follows automatically.
+This mirrors how real planning works, and it's what makes the "known events" feature natural: a planner adjusts the hires and departures they control, and the headcount (and cost) follows automatically. Each adjustment can either **add to** the forecast (nudge the model's number up or down) or **replace** a specific month's value outright — useful for forcing a known figure, like zero departures during a freeze.
 
 The two forecasting methods are:
 
@@ -133,7 +143,7 @@ Then open either notebook in the `notebooks/` folder.
 
 ## Tools used
 
-Python, pandas, statsmodels (for the Holt-Winters forecasting), matplotlib (charts), and Streamlit (the interactive app).
+Python, pandas, statsmodels (for the Holt-Winters forecasting), matplotlib (charts), and Streamlit (the interactive app). The app is deployed for free on Streamlit Community Cloud, which runs it directly from this GitHub repository.
 
 ---
 
