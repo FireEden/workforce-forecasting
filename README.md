@@ -6,7 +6,7 @@ Think of it as a smarter version of the spreadsheet that finance and HR teams us
 
 > *How many people will we have next year — and what will they actually cost?*
 
-**🔗 Live demo: [peiting-workforce-forecasting.streamlit.app]((https://peiting-workforce-forecasting.streamlit.app/))** — try it in your browser, no install needed.
+**🔗 Live demo: [peiting-workforce-forecasting.streamlit.app](https://peiting-workforce-forecasting.streamlit.app/)** — try it in your browser, no install needed.
 
 > *Replace the link above with your actual Streamlit URL once the app is deployed. (On the free tier, the app may take ~30 seconds to wake up if it hasn't been used recently.)*
 
