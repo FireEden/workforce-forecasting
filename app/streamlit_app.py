@@ -26,7 +26,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import streamlit as st
 
 from forecast import (
@@ -35,6 +35,69 @@ from forecast import (
     BENEFITS_RATE,
     OVERHEAD_RATE,
 )
+
+
+# ----------------------------------------------------------------------
+# Shared chart styling — modern, consistent, and theme-aware (light + dark)
+# ----------------------------------------------------------------------
+COLORS = {
+    "primary": "#6366F1",    # indigo — vivid on both light and dark
+    "positive": "#10B981",   # emerald green
+    "negative": "#EF4444",   # red
+    "neutral": "#94A3B8",    # slate gray
+    "history": "#64748B",    # slate — for the historical line
+}
+
+
+def theme_colors():
+    """Return text/grid colors that adapt to the active light or dark theme.
+
+    The brand colors read well on both backgrounds, but text and gridlines need
+    to flip: dark on a light page, light on a dark page. We read the active
+    theme from Streamlit's context, falling back to light if unavailable.
+    """
+    try:
+        theme_type = st.context.theme.get("type")  # "light" or "dark"
+    except Exception:
+        theme_type = "light"
+
+    if theme_type == "dark":
+        return {
+            "text": "#E5E7EB",
+            "grid": "rgba(203,213,225,0.22)",
+            "zeroline": "rgba(203,213,225,0.55)",
+            "history": "#CBD5E1",   # light slate so history reads on dark
+        }
+    return {
+        "text": "#1A1A2E",
+        "grid": "rgba(148,163,184,0.25)",
+        "zeroline": "rgba(100,116,139,0.6)",
+        "history": "#475569",       # dark slate on light
+    }
+
+
+def style_fig(fig, title, y_title, x_title="Date", height=420):
+    """Apply shared modern styling with transparent, theme-aware backgrounds."""
+    tc = theme_colors()
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=18, color=tc["text"])),
+        xaxis_title=x_title,
+        yaxis_title=y_title,
+        height=height,
+        font=dict(family="system-ui, -apple-system, sans-serif", size=13,
+                  color=tc["text"]),
+        margin=dict(l=60, r=30, t=60, b=50),
+        legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="right", x=1),
+        hovermode="x unified",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False, linecolor=tc["grid"],
+                     tickfont=dict(color=tc["text"]), title_font=dict(color=tc["text"]))
+    fig.update_yaxes(showgrid=True, gridcolor=tc["grid"], zeroline=True,
+                     zerolinecolor=tc["zeroline"], zerolinewidth=1,
+                     tickfont=dict(color=tc["text"]), title_font=dict(color=tc["text"]))
+    return fig
 
 
 # ----------------------------------------------------------------------
@@ -146,21 +209,32 @@ def render_breakdown(pure, add_only, final, title):
         "How the adjustments build on top of the statistical forecast. The "
         "shaded bands are the headcount added (or removed) by known events."
     )
-    fig, ax = plt.subplots(figsize=(11, 4.5))
-    ax.plot(pure["date"], pure["headcount"],
-            label="1. Forecast method only", marker="o", ms=4, color="#1f77b4")
-    ax.plot(add_only["date"], add_only["headcount"],
-            label="2. + known events (added)", marker="s", ms=4, color="#2ca02c")
-    ax.plot(final["date"], final["headcount"],
-            label="3. Final (+ replace-value events)", marker="^", ms=5, color="#d62728")
-    ax.fill_between(pure["date"], pure["headcount"], add_only["headcount"],
-                    alpha=0.15, color="#2ca02c")
-    ax.fill_between(add_only["date"], add_only["headcount"], final["headcount"],
-                    alpha=0.15, color="#d62728")
-    ax.set_title(title)
-    ax.set_xlabel("Date"); ax.set_ylabel("Headcount")
-    ax.legend(); ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    fig = go.Figure()
+    # Line 1: pure method. Adding it first lets the shaded bands fill to it.
+    fig.add_trace(go.Scatter(
+        x=pure["date"], y=pure["headcount"], name="1. Forecast method only",
+        mode="lines+markers", line=dict(color=COLORS["primary"], width=2.5),
+        marker=dict(size=5),
+        hovertemplate="%{x|%b %Y}<br>%{y:,} people<extra></extra>",
+    ))
+    # Line 2: + added events, with a green band filling down to line 1.
+    fig.add_trace(go.Scatter(
+        x=add_only["date"], y=add_only["headcount"], name="2. + known events (added)",
+        mode="lines+markers", line=dict(color=COLORS["positive"], width=2.5),
+        marker=dict(size=5), fill="tonexty",
+        fillcolor="rgba(16,185,129,0.15)",
+        hovertemplate="%{x|%b %Y}<br>%{y:,} people<extra></extra>",
+    ))
+    # Line 3: final (+ replace), with a red band filling down to line 2.
+    fig.add_trace(go.Scatter(
+        x=final["date"], y=final["headcount"], name="3. Final (+ replace-value events)",
+        mode="lines+markers", line=dict(color=COLORS["negative"], width=2.5),
+        marker=dict(size=6), fill="tonexty",
+        fillcolor="rgba(239,68,68,0.15)",
+        hovertemplate="%{x|%b %Y}<br>%{y:,} people<extra></extra>",
+    ))
+    style_fig(fig, title, "Headcount")
+    st.plotly_chart(fig, use_container_width=True)
 
     method_hc = int(pure["headcount"].iloc[-1])
     add_effect = int(add_only["headcount"].iloc[-1]) - method_hc
@@ -182,28 +256,44 @@ def render_breakdown(pure, add_only, final, title):
 # Helper: the two standard charts (headcount, cost) for any forecast
 # ----------------------------------------------------------------------
 def render_headcount_chart(history, final, title):
-    fig, ax = plt.subplots(figsize=(11, 4.5))
-    ax.plot(history["date"], history["headcount"], label="History", color="black")
-    ax.plot(final["date"], final["headcount"],
-            label="Forecast", ls="--", marker="o", ms=4, color="#1f77b4")
-    ax.axvline(history["date"].iloc[-1], color="gray", ls=":", alpha=0.6)
-    ax.set_title(title)
-    ax.set_xlabel("Date"); ax.set_ylabel("Headcount")
-    ax.legend(); ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    tc = theme_colors()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=history["date"], y=history["headcount"], name="History",
+        mode="lines", line=dict(color=tc["history"], width=2.5),
+        hovertemplate="%{x|%b %Y}<br>%{y:,} people<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=final["date"], y=final["headcount"], name="Forecast",
+        mode="lines+markers", line=dict(color=COLORS["primary"], width=2.5, dash="dash"),
+        marker=dict(size=5),
+        hovertemplate="%{x|%b %Y}<br>%{y:,} people<extra></extra>",
+    ))
+    # A subtle marker for where history ends and the forecast begins.
+    fig.add_vline(x=history["date"].iloc[-1], line_width=1, line_dash="dot",
+                  line_color=tc["zeroline"])
+    style_fig(fig, title, "Headcount")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_cost_chart(history, final, title):
-    fig, ax = plt.subplots(figsize=(11, 4.5))
-    ax.plot(history["date"], history["monthly_total_cost"] / 1e6,
-            label="History", color="black")
-    ax.plot(final["date"], final["monthly_total_cost"] / 1e6,
-            label="Forecast", ls="--", marker="o", ms=4, color="green")
-    ax.axvline(history["date"].iloc[-1], color="gray", ls=":", alpha=0.6)
-    ax.set_title(title)
-    ax.set_xlabel("Date"); ax.set_ylabel("Cost ($ millions)")
-    ax.legend(); ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    tc = theme_colors()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=history["date"], y=history["monthly_total_cost"] / 1e6, name="History",
+        mode="lines", line=dict(color=tc["history"], width=2.5),
+        hovertemplate="%{x|%b %Y}<br>$%{y:.2f}M<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=final["date"], y=final["monthly_total_cost"] / 1e6, name="Forecast",
+        mode="lines+markers", line=dict(color=COLORS["positive"], width=2.5, dash="dash"),
+        marker=dict(size=5),
+        hovertemplate="%{x|%b %Y}<br>$%{y:.2f}M<extra></extra>",
+    ))
+    fig.add_vline(x=history["date"].iloc[-1], line_width=1, line_dash="dot",
+                  line_color=tc["zeroline"])
+    style_fig(fig, title, "Cost ($ millions)")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ----------------------------------------------------------------------
