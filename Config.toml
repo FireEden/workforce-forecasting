@@ -1,0 +1,10 @@
+# Streamlit theme configuration.
+# Sets the app-wide accent color and fonts. The charts themselves adapt to
+# whichever light/dark theme the viewer has active.
+
+[theme]
+primaryColor = "#6366F1"
+font = "sans serif"
+
+[server]
+headless = true
